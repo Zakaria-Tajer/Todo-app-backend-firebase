@@ -1,4 +1,5 @@
 import 'package:chips_choice_null_safety/chips_choice_null_safety.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_todolist/constants/colors.dart';
 import 'package:firebase_todolist/screens/bottom_navigator.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,7 @@ import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 
 class AddTodo extends StatefulWidget {
-  const AddTodo({super.key});
+  const AddTodo({Key? key}) : super(key: key);
 
   @override
   State<AddTodo> createState() => _AddTodoState();
@@ -14,6 +15,8 @@ class AddTodo extends StatefulWidget {
 
 class _AddTodoState extends State<AddTodo> {
   String? _selectedValue;
+  TextEditingController _textEditingController = TextEditingController();
+
   int tag = 1;
   List<String> tags = [];
   List<String> options = ['Normal', 'Medieum', 'High'];
@@ -49,6 +52,22 @@ class _AddTodoState extends State<AddTodo> {
       });
   }
 
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  void _addTodo(String text, String option, String date, String time) {
+    firestore
+        .collection("todos")
+        .add({
+          "todo": text,
+          "priority": option,
+          "date": date,
+          "time": time,
+          "timestamp": FieldValue
+              .serverTimestamp() // use FieldValue.serverTimestamp() to set the timestamp value
+        })
+        .then((value) => {print("inserted: ${value.id}")})
+        .catchError((error) => {print("Failed to add todo: $error")});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,8 +98,9 @@ class _AddTodoState extends State<AddTodo> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(30),
               ),
-              child: const TextField(
-                decoration: InputDecoration(
+              child: TextField(
+                controller: _textEditingController,
+                decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.all(10),
                     hintText: 'Write Here',
@@ -136,6 +156,26 @@ class _AddTodoState extends State<AddTodo> {
                 ),
               ],
             ),
+            SizedBox(
+              width: 200, // set the desired width
+              height: 50, // set the desired height
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+
+                onPressed: () => _addTodo(
+                    _textEditingController.text,
+                    options[tag],
+                    _selectedDate.toString(),
+                    _selectedTime?.format(context) ?? ""),
+                child: const Text('Add Todo',
+                    style:
+                        TextStyle(fontSize: 18)), // set the desired font size
+              ),
+            )
           ],
         ),
       ),
